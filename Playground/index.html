@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena Playground</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .button { margin: 5px 0; padding: 10px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
+        .button:hover { background-color: #0056b3; }
+        .output { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Arena Playground</h1>
+        <label for="participantId">Enter Your Participant ID:</label>
+        <input type="number" id="participantId" value="1" min="1">
+        <button class="button" onclick="setParticipantId()">Set Participant ID</button>
+        <button class="button" onclick="getCurrentSeason()">Get Current Season</button>
+        <button class="button" onclick="getLeaderboard()">Get Leaderboard</button>
+        <button class="button" onclick="generateOpponents()">Generate Opponents</button>
+        <button class="button" onclick="getAvailableOpponents()">Get Available Opponents</button>
+        <label for="opponentSelect">Select Opponent:</label>
+        <select id="opponentSelect"></select>
+        <button class="button" onclick="startBattle()">Start Battle</button>
+        <div class="output" id="output"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
