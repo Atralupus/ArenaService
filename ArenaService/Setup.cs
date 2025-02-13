@@ -6,7 +6,7 @@ using ArenaService.Filter;
 using ArenaService.JsonConverters;
 using ArenaService.Options;
 using ArenaService.Services;
-using ArenaService.Data;
+using ArenaService.Shared.Data;
 using ArenaService.Jwt;
 using ArenaService.Repositories;
 using ArenaService.Worker;
@@ -158,18 +158,18 @@ public class Startup
             .Get<OpsConfigOptions>();
 
         services.AddSingleton(new BattleTokenGenerator(opsConfig!.JwtSecretKey));
-        services
-            .AddSingleton<CacheBlockTipWorker>()
-            .AddHostedService(provider => provider.GetRequiredService<CacheBlockTipWorker>());
-        services
-            .AddSingleton<PrepareRankingWorker>()
-            .AddHostedService(provider => provider.GetRequiredService<PrepareRankingWorker>());
-        services
-            .AddSingleton<RankingCopyWorker>()
-            .AddHostedService(provider => provider.GetRequiredService<RankingCopyWorker>());
-        services
-            .AddSingleton<AllClanRankingWorker>()
-            .AddHostedService(provider => provider.GetRequiredService<AllClanRankingWorker>());
+        // services
+        //     .AddSingleton<CacheBlockTipWorker>()
+        //     .AddHostedService(provider => provider.GetRequiredService<CacheBlockTipWorker>());
+        // services
+        //     .AddSingleton<PrepareRankingWorker>()
+        //     .AddHostedService(provider => provider.GetRequiredService<PrepareRankingWorker>());
+        // services
+        //     .AddSingleton<RankingCopyWorker>()
+        //     .AddHostedService(provider => provider.GetRequiredService<RankingCopyWorker>());
+        // services
+        //     .AddSingleton<AllClanRankingWorker>()
+        //     .AddHostedService(provider => provider.GetRequiredService<AllClanRankingWorker>());
 
         services.AddHangfireServer();
         services.AddHealthChecks();

@@ -36,7 +36,7 @@ def insert_policy():
                         VALUES (%s, %s, %s, %s, %s, now(), now())
                         RETURNING id
                     """),
-                    ("battle-ticket-season-policy", 5, 20, 4, [1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0,3.2,3.4,3.6,3.8,4.0,4.2,4.4,4.6,4.8,5.0,5.2,5.4,5.6,5.8,6.0,6.2,6.4,6.6,6.8,7.0,7.2,7.4,7.6,7.8,8.0,8.2,8.4,8.6,8.8])
+                    ("Season", 5, 24, 4, [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6])
                 )
                 conn.commit()
 
@@ -46,7 +46,17 @@ def insert_policy():
                         VALUES (%s, %s, %s, %s, %s, now(), now())
                         RETURNING id
                     """),
-                    ("battle-ticket-off-season-policy", 5, 20, 4, [1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8])
+                    ("Off Season", 5, 9, 4, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+                )
+                conn.commit()
+
+                cursor.execute(
+                    sql.SQL("""
+                        INSERT INTO battle_ticket_policies (name, default_tickets_per_round, max_purchasable_tickets_per_season, max_purchasable_tickets_per_round, purchase_prices, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, now(), now())
+                        RETURNING id
+                    """),
+                    ("Championship", 5, 24, 4, [2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6])
                 )
                 conn.commit()
 
@@ -56,7 +66,7 @@ def insert_policy():
                         VALUES (%s, %s, %s, %s, now(), now())
                         RETURNING id
                     """),
-                    ("refresh-ticket-season-policy", 2, 4, [0.5, 1.5, 3, 4.5])
+                    ("Season", 4, 4, [0.5, 1, 1.5, 2])
                 )
                 conn.commit()
 
@@ -66,7 +76,17 @@ def insert_policy():
                         VALUES (%s, %s, %s, %s, now(), now())
                         RETURNING id
                     """),
-                    ("refresh-ticket-off-season-policy", 2, 4, [0.5, 1.5, 3, 4.5])
+                    ("Off Season", 4, 4, [0.1, 0.2, 0.3, 0.4])
+                )
+                conn.commit()
+
+                cursor.execute(
+                    sql.SQL("""
+                        INSERT INTO refresh_ticket_policies (name, default_tickets_per_round, max_purchasable_tickets_per_round, purchase_prices, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, now(), now())
+                        RETURNING id
+                    """),
+                    ("Championship", 4, 4, [1, 2, 3, 4])
                 )
                 conn.commit()
 
