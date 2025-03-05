@@ -9,6 +9,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.Authentication;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -18,6 +23,15 @@ builder.Services.Configure<RedisOptions>(configuration.GetSection(RedisOptions.S
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+
+// Configure Basic Auth Options
+builder.Services.Configure<BasicAuthOptions>(
+    builder.Configuration.GetSection(BasicAuthOptions.SectionName));
+
+builder.Services.AddAuthentication("Basic")
+    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("Basic", null);
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddDbContext<ArenaDbContext>(options =>
     options
@@ -77,7 +91,57 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
 app.Run();
+
+// Basic Authentication Handler
+public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+    private readonly IConfiguration _configuration;
+
+    public BasicAuthenticationHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock,
+        IConfiguration configuration)
+        : base(options, logger, encoder, clock)
+    {
+        _configuration = configuration;
+    }
+
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        if (!Request.Headers.ContainsKey("Authorization"))
+        {
+            Response.Headers.Add("WWW-Authenticate", "Basic");
+            return AuthenticateResult.Fail("Authorization header not found.");
+        }
+
+        var authHeader = AuthenticationHeaderValue.Parse(Request.Headers["Authorization"]);
+        var credentialBytes = Convert.FromBase64String(authHeader.Parameter ?? string.Empty);
+        var credentials = Encoding.UTF8.GetString(credentialBytes).Split(':', 2);
+        var username = credentials[0];
+        var password = credentials[1];
+
+        var config = _configuration.GetSection(BasicAuthOptions.SectionName).Get<BasicAuthOptions>();
+
+        if (username == config?.Username && password == config?.Password)
+        {
+            var claims = new[] { new Claim(ClaimTypes.Name, username) };
+            var identity = new ClaimsIdentity(claims, Scheme.Name);
+            var principal = new ClaimsPrincipal(identity);
+            var ticket = new AuthenticationTicket(principal, Scheme.Name);
+
+            return AuthenticateResult.Success(ticket);
+        }
+
+        Response.Headers.Add("WWW-Authenticate", "Basic");
+        return AuthenticateResult.Fail("Invalid username or password");
+    }
+}
