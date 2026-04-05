@@ -123,6 +123,10 @@ public class CacheBlockTipWorker : BackgroundService
         {
             var seasonInfo = await seasonService.GetSeasonAndRoundByBlock(blockIndex);
 
+            _logger.LogInformation(
+                $"Season cache update: seasonId={seasonInfo.Season.Id} startBlock={seasonInfo.Season.StartBlock} endBlock={seasonInfo.Season.EndBlock} currentBlock={blockIndex}"
+            );
+
             await seasonCacheRepo.SetSeasonAsync(
                 seasonInfo.Season.Id,
                 seasonInfo.Season.StartBlock,
@@ -152,6 +156,10 @@ public class CacheBlockTipWorker : BackgroundService
         if (shouldUpdate)
         {
             var seasonInfo = await seasonService.GetSeasonAndRoundByBlock(blockIndex);
+
+            _logger.LogInformation(
+                $"Round cache update: roundId={seasonInfo.Round.Id} roundIndex={seasonInfo.Round.RoundIndex} startBlock={seasonInfo.Round.StartBlock} endBlock={seasonInfo.Round.EndBlock} currentBlock={blockIndex}"
+            );
 
             await seasonCacheRepo.SetRoundAsync(
                 seasonInfo.Round.Id,

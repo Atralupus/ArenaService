@@ -49,7 +49,7 @@ public class RankingCopyWorker : BackgroundService
                     var prevRound = await roundRepo.GetRoundAsync(cachedSeason.Id, cachedRound.RoundIndex - 1);
 
                     _logger.LogInformation(
-                        $"Check prepare next round {cachedBlockIndex >= cachedRound.EndBlock - 5} prepareInProgress: {prepareInProgress}"
+                        $"Check prepare next round: cachedBlockIndex={cachedBlockIndex} cachedRound.EndBlock={cachedRound.EndBlock} threshold={cachedRound.EndBlock - 5} triggered={cachedBlockIndex >= cachedRound.EndBlock - 5} prepareInProgress={prepareInProgress}"
                     );
                     // 라운드가 끝나기 5 블록 전에 다음 라운드 랭킹을 준비합니다.
                     if (cachedBlockIndex >= cachedRound.EndBlock - 5)
@@ -133,18 +133,17 @@ public class RankingCopyWorker : BackgroundService
         );
 
         _logger.LogInformation(
-            $"Round {nextRoundInfo.Round.Id}: {nextRoundRankingCount} < {previousRoundRankingCount}, prepareInProgress: {prepareInProgress}"
+            $"ProcessAsync: nextRound={nextRoundInfo.Round.Id} nextCount={nextRoundRankingCount} prevCount={previousRoundRankingCount} prepareInProgress={prepareInProgress}"
         );
-        if (
-            !prepareInProgress
-            & nextRoundRankingCount < previousRoundRankingCount
-        )
+        if (!prepareInProgress & nextRoundRankingCount < previousRoundRankingCount)
         {
             await PrepareNextRound(nextRoundInfo, roundPreparationService);
         }
         else
         {
-            _logger.LogInformation($"Round {nextRoundInfo.Round.Id}: Already prepared round.");
+            _logger.LogInformation(
+                $"Round {nextRoundInfo.Round.Id}: Skipping preparation. prepareInProgress={prepareInProgress} nextCount={nextRoundRankingCount} prevCount={previousRoundRankingCount}"
+            );
         }
     }
 
@@ -154,10 +153,15 @@ public class RankingCopyWorker : BackgroundService
     )
     {
         prepareInProgress = true;
-
-        await roundPreparationService.PrepareNextRoundWithSnapshotAsync(nextRoundInfo);
-
-        prepareInProgress = false;
+        _logger.LogInformation($"Start PrepareNextRound {nextRoundInfo.Round.Id}");
+        try
+        {
+            await roundPreparationService.PrepareNextRoundWithSnapshotAsync(nextRoundInfo);
+        }
+        finally
+        {
+            prepareInProgress = false;
+        }
         _logger.LogInformation($"PrepareNextRound {nextRoundInfo.Round.Id} Done");
     }
 }

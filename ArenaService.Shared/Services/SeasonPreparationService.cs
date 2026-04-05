@@ -49,9 +49,28 @@ public class SeasonPreparationService : ISeasonPreparationService
 
     public async Task PrepareSeasonAsync((Season Season, Round Round) seasonAndRound)
     {
+        _logger.LogInformation(
+            $"PrepareSeasonAsync start: seasonId={seasonAndRound.Season.Id} arenaType={seasonAndRound.Season.ArenaType} requiredMedalCount={seasonAndRound.Season.RequiredMedalCount} startBlock={seasonAndRound.Season.StartBlock} roundId={seasonAndRound.Round.Id}"
+        );
+
         var prevSeason = await _seasonService.GetLastSeasonByBlockIndexAsync(
             seasonAndRound.Season.StartBlock
         );
+
+        if (prevSeason == null)
+        {
+            _logger.LogError(
+                $"PrepareSeasonAsync: No previous SEASON type season found before block {seasonAndRound.Season.StartBlock}. Cannot prepare season {seasonAndRound.Season.Id}."
+            );
+            throw new NotFoundSeasonException(
+                $"No previous SEASON type found before block {seasonAndRound.Season.StartBlock}"
+            );
+        }
+
+        _logger.LogInformation(
+            $"PrepareSeasonAsync: Previous season for participants: seasonId={prevSeason.Id} arenaType={prevSeason.ArenaType}"
+        );
+
         var prevSeasonId = prevSeason.Id;
         Dictionary<Address, int>? medalCounts = null;
         int skip = 0;
@@ -113,6 +132,10 @@ public class SeasonPreparationService : ISeasonPreparationService
         Dictionary<Address, int>? medalCounts
     )
     {
+        _logger.LogInformation(
+            $"GetEligibleParticipants: seasonId={season.Id} arenaType={season.ArenaType} candidateCount={prevSeasonParticipants.Count}"
+        );
+
         if (season.ArenaType != ArenaType.CHAMPIONSHIP)
             return prevSeasonParticipants.ToList();
 
@@ -124,6 +147,10 @@ public class SeasonPreparationService : ISeasonPreparationService
             var seasons = await _seasonService.ClassifyByChampionship(season.StartBlock + 1);
             var onlySeasons = seasons.Where(s => s.ArenaType == ArenaType.SEASON).ToList();
 
+            _logger.LogInformation(
+                $"GetEligibleParticipants: championship medal check seasons={string.Join(",", onlySeasons.Select(s => s.Id))} requiredMedals={season.RequiredMedalCount}"
+            );
+
             if (!onlySeasons.Any())
                 throw new NotFoundSeasonException("Not found seasons for check medals");
 
@@ -132,12 +159,18 @@ public class SeasonPreparationService : ISeasonPreparationService
             );
         }
 
-        return prevSeasonParticipants
+        var eligible = prevSeasonParticipants
             .Where(p =>
                 medalCounts.TryGetValue(p.AvatarAddress, out var totalMedals)
                 && totalMedals >= season.RequiredMedalCount
             )
             .ToList();
+
+        _logger.LogInformation(
+            $"GetEligibleParticipants: eligible after medal filter={eligible.Count} / {prevSeasonParticipants.Count}"
+        );
+
+        return eligible;
     }
 
     private Dictionary<int, List<(Address, int)>> CreateClanRankingData(

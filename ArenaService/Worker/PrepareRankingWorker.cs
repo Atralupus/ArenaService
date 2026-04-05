@@ -62,7 +62,7 @@ public class PrepareRankingWorker : BackgroundService
                     var cachedSeason = await seasonCacheRepo.GetSeasonAsync();
 
                     _logger.LogInformation(
-                        $"Check prepare next season {cachedBlockIndex >= cachedSeason.EndBlock - 50} prepareInProgress: {prepareInProgress}"
+                        $"Check prepare next season: cachedBlockIndex={cachedBlockIndex} cachedSeason.EndBlock={cachedSeason.EndBlock} threshold={cachedSeason.EndBlock - 50} triggered={cachedBlockIndex >= cachedSeason.EndBlock - 50} prepareInProgress={prepareInProgress}"
                     );
 
                     // 시즌이 끝나기 50블록 전부터 다음 시즌에 대한 정보를 미리 주입해둡니다.
@@ -85,6 +85,9 @@ public class PrepareRankingWorker : BackgroundService
                         & await participantRepo.GetParticipantCountAsync(cachedSeason.Id) <= 0
                     )
                     {
+                        _logger.LogWarning(
+                            $"Current season {cachedSeason.Id} has no participants at block {cachedBlockIndex}. Triggering recovery preparation."
+                        );
                         var season = await seasonRepo.GetSeasonAsync(
                             cachedSeason.Id,
                             q => q.Include(s => s.Rounds)
@@ -145,15 +148,17 @@ public class PrepareRankingWorker : BackgroundService
     )
     {
         var nextSeason = await seasonService.GetSeasonAndRoundByBlock(blockIndex + 51);
+        var snapshotCount = await rankingSnapshotRepo.GetRankingSnapshotsCount(
+            nextSeason.Season.Id,
+            nextSeason.Round.Id
+        );
+
+        _logger.LogInformation(
+            $"ProcessAsync: nextSeason={nextSeason.Season.Id} snapshotCount={snapshotCount} prepareInProgress={prepareInProgress}"
+        );
 
         // 캐싱 중이거나 캐싱이 된 상태라면 진행하지 않습니다.
-        if (
-            !prepareInProgress
-            & await rankingSnapshotRepo.GetRankingSnapshotsCount(
-                nextSeason.Season.Id,
-                nextSeason.Round.Id
-            ) <= 0
-        )
+        if (!prepareInProgress & snapshotCount <= 0)
         {
             await PrepareNextSeason(nextSeason, seasonPreparationService);
 
@@ -166,7 +171,9 @@ public class PrepareRankingWorker : BackgroundService
         }
         else
         {
-            _logger.LogInformation($"Season {nextSeason.Season.Id}: Already prepared season.");
+            _logger.LogInformation(
+                $"Season {nextSeason.Season.Id}: Skipping preparation. prepareInProgress={prepareInProgress} snapshotCount={snapshotCount}"
+            );
         }
     }
 
@@ -177,10 +184,14 @@ public class PrepareRankingWorker : BackgroundService
     {
         prepareInProgress = true;
         _logger.LogInformation($"Start PrepareNextSeason {nextSeason.Season.Id}");
-
-        await seasonPreparationService.PrepareSeasonAsync(nextSeason);
-
-        prepareInProgress = false;
+        try
+        {
+            await seasonPreparationService.PrepareSeasonAsync(nextSeason);
+        }
+        finally
+        {
+            prepareInProgress = false;
+        }
         _logger.LogInformation($"PrepareNextSeason {nextSeason.Season.Id} Done");
     }
 
